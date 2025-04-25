@@ -1,6 +1,6 @@
 
 use iced::{Element,Length,Renderer,Task,Theme};
-use iced::widget::{Button,Container,Text,column,row,text_editor};
+use iced::widget::{Button,Container,Space,Text,column,row,text_editor};
 
 
 use rusqlite::{Connection,OpenFlags};
@@ -30,8 +30,6 @@ fn main() -> Result<(),AppError> {
     .run_with(|| DBEditor::new(conn))?;
     Ok(())
 }
-
-
 
 
 
@@ -149,18 +147,19 @@ impl DBEditor {
 
         
         let layout = row![
+            Space::with_width(Length::Fixed(4.0)),
             column![
-                display,
+                row![display, Space::with_width(Length::Fill), exec_button],
                 input,
-                exec_button,
                 output
                 ],
+            Space::with_width(Length::Fixed(8.0)),
             column![
-                display_add,
+                row![display_add,Space::with_width(Length::Fill),exec_button_add],
                 input_add,
-                exec_button_add,
                 output_add
-                ]
+                ],
+            Space::with_width(Length::Fixed(4.0)),
             ];
 
         let header = Text::new("Welcome to the to-do list editor");
