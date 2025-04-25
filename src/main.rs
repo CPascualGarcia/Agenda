@@ -145,6 +145,24 @@ impl DBEditor {
         let output_add: Text<'_, Theme, Renderer> = Text::new(&self.result_add);
         //
 
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////
+        // Agenda for today
+
+        // let display_today: Text<'_, Theme, Renderer>  = Text::new("Agenda for today: ");
+        // let input_today: Text<'_, Theme, Renderer>  = Text::new(&self.agenda_today);
+
+        // let today: iced::widget::Column<'_, Message> = column![
+        //     display_today,
+        //     input_today
+        // ];
+
+        /////////////////////
+        // Agenda for tomorrow
+
+        let display_tomorrow: Text<'_, Theme, Renderer>  = Text::new("Agenda for tomorrow: "); 
+        
+        ///////////////////////////////////////////////////////////////////////////////////////////
         
         let layout = row![
             Space::with_width(Length::Fixed(4.0)),
@@ -162,14 +180,14 @@ impl DBEditor {
             Space::with_width(Length::Fixed(4.0)),
             ];
 
-        let header = Text::new("Welcome to the to-do list editor");
-        let layout2 = column![header.center(), layout].align_x(iced::Alignment::Center);
+        let header = Text::new("Welcome to the agenda!").size(40);
+        let layout2 = column![header.center(), Space::with_height(Length::Fixed(15.0)), layout].align_x(iced::Alignment::Center);
         
         Container::new(layout2)
             // .align_x(iced::Center)
             .align_y(iced::Alignment::Center)
             // .width(Length::Fill)
-            .height(Length::Fill)
+            // .height(Length::Fill)
             .into()
     }
 
