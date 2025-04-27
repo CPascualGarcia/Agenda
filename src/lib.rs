@@ -1,4 +1,5 @@
 use rusqlite::{Connection,OpenFlags};
+use core::task;
 use std::{sync::Arc, time::Duration};
 use chrono::{Datelike, NaiveTime, Utc};
 
@@ -161,6 +162,23 @@ pub fn db_writer(conn: &Connection, date: String, hour: String, task: String) ->
 
     Ok(())
 }
+
+pub fn db_eraser(conn: &Connection, date: String, task: String) -> Result<(), AppError> {
+    
+    let mut stmt = conn.prepare(
+        "DELETE FROM events WHERE date = ?1 AND task = ?3")?;
+
+    match stmt.execute((date, task)) {
+        Ok(_) => {
+            Ok(())
+        },
+        Err(e) => { 
+            Err(AppError::RSQLError(Arc::new(e)))
+        }
+    }
+}
+
+
 
 pub fn db_setup(db_path: &str) -> Result<(), AppError> {
     let conn = Connection::open_with_flags(db_path,

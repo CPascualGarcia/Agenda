@@ -14,6 +14,7 @@ use Agenda::*;
 // TO DO
 // Add year to the entries in db_writer and db_reader
 // Add a delete button
+// In db_eraser, verify that the code returns something if the asked entry does not exist
 // Perhaps adapt content_add into a multi-box setup
 // Asynchronous functionalities
 
@@ -39,6 +40,7 @@ struct DBEditor {
     db_conn: Connection,
     content: text_editor::Content,
     content_add: text_editor::Content,
+    // content_erase: text_editor::Content,
     query: String,
     result_check: String,
     result_add: String,
@@ -52,6 +54,7 @@ struct DBEditor {
 enum Message {
     TextEditorAction(text_editor::Action),
     TextEditorActionAdd(text_editor::Action),
+    // TextEditorActionErase(text_editor::Action),
     QueryDo,
     QueryChange
 }
@@ -64,8 +67,10 @@ impl DBEditor {
             Self {
             db_conn: connection,
             content: text_editor::Content::with_text("Input as: <DD/MM>"),
-            content_add: text_editor::Content::with_text("Input as: <DD/MM> <24:00 (optional)> <task>"),
-            
+            content_add: text_editor::Content::with_text("Input as: <DD/MM> <HH:mm (optional)> <task>"),
+            // content_erase:: text_editor::Content::with_text("Input as: <DD/MM> <task>"),
+
+
             query:        String::new(),
             result_check: String::new(),
             result_add:   String::new(),
@@ -88,6 +93,10 @@ impl DBEditor {
                 self.content_add.perform(action);
                 self.query = self.content_add.text();
             },
+            // Message::TextEditorActionErase(action) => {
+            //     self.content_erase.perform(action);
+            //     self.query = self.content_erase.text();
+            // },
             Message::QueryDo => {
                 let input_query = self.query.trim().to_owned()+"/2025";
                 match NaiveDate::parse_from_str(&input_query, "%d/%m/%Y") {
@@ -98,15 +107,7 @@ impl DBEditor {
                     Err(_) => {
                         self.result_check = "Error parsing query".to_string();
                     }
-                }
-                // match self.query.trim().parse::<usize>() {
-                //     Ok(query_input) => {
-                //         self.result_check = db_reader(&self.db_conn, &query_input).unwrap();
-                //     },
-                //     Err(_) => {
-                //         self.result_check = "Error parsing query".to_string();
-                //     }
-                // };                
+                }              
             },
             Message::QueryChange => {
                 let contents =  parser_input(&self.query);
@@ -160,7 +161,7 @@ impl DBEditor {
         // let result_holder = Text::new(result_check),
 
         // Verification of an entry
-        let display = Text::new("Check task at given line number: ");
+        let display = Text::new("Check task at given day: ");
         
         let input_check = iced::widget::TextEditor::new(&self.content)
             .on_action(Message::TextEditorAction);
@@ -183,12 +184,20 @@ impl DBEditor {
         let output_add: Text<'_, Theme, Renderer> = Text::new(&self.result_add);
         //
 
+        // Erasure of a task
+        let display_erase: Text<'_, Theme, Renderer> = Text::new("Erase task: ");
+
+        // let input_erase: iced::widget::TextEditor<'_, _, Message> = iced::widget::TextEditor::new(&self.content_erase)
+        //     .on_action(Message::TextEditorActionErase);
+
+        // let exec_button_erase: iced::widget::Button<'_, Message, Theme, Renderer> = Button::new("Erase").on_press(Message::QueryErase);
+
         ///////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////
         // Agenda for today
 
         // let display_today: Text<'_, Theme, Renderer>  = Text::new("Agenda for today: ");
-        let output_today: Text<'_, Theme, Renderer>  = Text::new(&self.agenda_today);
+        let output_today: Text<'_, Theme, Renderer>  = Text::new(&self.agenda_today).height(200.);
 
         let today: iced::widget::Column<'_, Message> = column![
             // display_today,
@@ -199,7 +208,7 @@ impl DBEditor {
         // Agenda for tomorrow
 
         // let display_tomorrow: Text<'_, Theme, Renderer>  = Text::new("Agenda for tomorrow: "); 
-        let output_tomorrow: Text<'_, Theme, Renderer>  = Text::new(&self.agenda_tomorrow);
+        let output_tomorrow: Text<'_, Theme, Renderer>  = Text::new(&self.agenda_tomorrow).height(200.);
 
         let tomorrow: iced::widget::Column<'_, Message> = column![
             // display_today,
@@ -215,7 +224,8 @@ impl DBEditor {
                 Space::with_height(Length::Fixed(10.0)),
                 row![display, Space::with_width(Length::Fill), exec_button],
                 input_check,
-                output_check
+                output_check,
+                display_erase
                 ],
             Space::with_width(Length::Fixed(10.0)),
             column![
