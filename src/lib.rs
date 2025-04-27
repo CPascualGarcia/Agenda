@@ -107,7 +107,7 @@ pub fn db_reader(conn: &Connection, x: &str) -> Result<String, AppError> {
         if hour == "_" {
             task.push("Daylong".to_string());
         } else  {
-            task.push(row.get(1)?);    
+            task.push(hour_padding(row.get(1)?));    
         };
 
         // activities.push(row.get(1)?);
@@ -126,8 +126,8 @@ pub fn db_reader(conn: &Connection, x: &str) -> Result<String, AppError> {
     });
 
     let joined_schedule: Vec<String> = activities.iter()
-    .map(|row| row.join(" - "))
-    .collect();
+            .map(|row| row.join(" - "))
+            .collect();
 
     // Ok(activities.join("\n"))
     Ok(joined_schedule.join("\n"))
@@ -182,4 +182,16 @@ pub fn db_setup(db_path: &str) -> Result<(), AppError> {
     )?;
 
     Ok(())
+}
+
+///////////////////////////////////////////////////
+// Other functions
+
+pub fn hour_padding(time: String) -> String {
+    if time.len() < 5 {
+        // format!("0{}",time)
+        "0".to_string() + &time
+    } else {
+        time.to_string()
+    }
 }

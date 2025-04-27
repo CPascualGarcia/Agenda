@@ -13,7 +13,7 @@ use Agenda::*;
 
 // TO DO
 // Add year to the entries in db_writer and db_reader
-// Add padding to the entries in db_writer and db_reader
+// Add a delete button
 // Perhaps adapt content_add into a multi-box setup
 // Asynchronous functionalities
 
