@@ -1,24 +1,26 @@
 
+use std::clone;
+
 use iced::{Element,Length,Renderer,Task,Theme};
 use iced::widget::{Button,Container,Space,Text,column,row,text_editor};
-
+use chrono::{NaiveDate,NaiveTime};
 
 use rusqlite::{Connection,OpenFlags};
 
 // extern crate Agenda;
 use Agenda::*;
-// mod my_lib;
-// use my_lib::*;
 
 
 // TO DO
-// Formatting - adjust spces for the text editor
+// Add functionality to load tasks of one day
+// Add some tasks for the day, then load them directly
+// Perhaps adapt content_add into a multi-box setup
 // Asynchronous functionalities
 
 
 
 fn main() -> Result<(),AppError> {
-    let db_path: &str = "TodoList.db"; // Prepare the path to the database
+    let db_path: &str = "Agenda_CPG.db"; // Prepare the path to the database
     db_setup(db_path).unwrap();       // Set database
     let conn = Connection::open_with_flags(db_path,
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE)?;
@@ -38,8 +40,12 @@ struct DBEditor {
     content: text_editor::Content,
     content_add: text_editor::Content,
     query: String,
-    result: String,
-    result_add: String
+    result_check: String,
+    result_add: String,
+
+    // Agenda 
+    agenda_today:    String,
+    agenda_tomorrow: String
 }
 
 #[derive(Debug,Clone)]
@@ -57,12 +63,15 @@ impl DBEditor {
         (
             Self {
             db_conn: connection,
-            content: text_editor::Content::with_text("Write here the no. of the line (e.g. 5)"),
-            content_add: text_editor::Content::with_text("Write here as: <line no.> <task>"),
+            content: text_editor::Content::with_text("Input as: <DD/MM>"),
+            content_add: text_editor::Content::with_text("Input as: <DD/MM> <24:00 (optional)> <task>"),
             
-            query: String::new(),
-            result: String::new(),
-            result_add: String::new(),
+            query:        String::new(),
+            result_check: String::new(),
+            result_add:   String::new(),
+
+            agenda_today: display_agenda().0,
+            agenda_tomorrow: display_agenda().1
         },
         // Task::perform(future, Message::TextAdded)
         Task::none()
@@ -80,57 +89,86 @@ impl DBEditor {
                 self.query = self.content_add.text();
             },
             Message::QueryDo => {
-                
-                match self.query.trim().parse::<usize>() {
-                    Ok(query_input) => {
-                        self.result = db_reader(&self.db_conn, &query_input).unwrap();
+                let input_query = self.query.trim().to_owned()+"/2025";
+                match NaiveDate::parse_from_str(&input_query, "%d/%m/%Y") {
+                    Ok(_) => {
+                        let date = self.query.trim().to_string();
+                        self.result_check = db_reader(&self.db_conn, &date).unwrap();
                     },
                     Err(_) => {
-                        self.result = "Error parsing query".to_string();
-                    }
-                };
-                // Task::perform(async move{
-                //     db_writer(&self.db_conn, "mustard", &self.content.as_text().parse::<usize>()).unwrap()},
-                //      Message::TextEditorAction);
-                
-            },
-            Message::QueryChange => {
-                if parser_input(&self.query).len() < 2 {
-                    self.result_add = "Invalid query".to_string();
-                    ()
-                } else {
-                    let (line1, contents_line1) = &self.query.trim().split_once(' ').unwrap();
-                    match (line1.parse::<usize>(), contents_line1.parse::<String>()) {                    
-                        (Ok(line), Ok(contents_line)) => {
-                            db_writer(&self.db_conn, contents_line, line).unwrap();
-                            self.result_add = "New task added".to_string();
-                        },
-                        _ => {
-                            self.result_add = "Unable to parse query".to_string();
-                        }
+                        self.result_check = "Error parsing query".to_string();
                     }
                 }
-            }
-        }
+                // match self.query.trim().parse::<usize>() {
+                //     Ok(query_input) => {
+                //         self.result_check = db_reader(&self.db_conn, &query_input).unwrap();
+                //     },
+                //     Err(_) => {
+                //         self.result_check = "Error parsing query".to_string();
+                //     }
+                // };                
+            },
+            Message::QueryChange => {
+                let contents =  parser_input(&self.query);
+                if  contents.len()< 2 {
+                    self.result_add = "Invalid query".to_string()
+                };
+                // Match case to parse the hour
+                match NaiveTime::parse_from_str(&contents[1], "%H:%M") {
+                    Ok(_) => {
+                        let (date, hour, task) = 
+                            (contents[0].clone(), contents[1].clone(), contents[2..].join(" ").clone());
+                        db_writer(&self.db_conn, date, hour, task).unwrap();
+                        self.result_add = "New timed task added".to_string();
+                    }
+                    Err(_) => {
+                        let (date, task) = (contents[0].clone(), contents[1..].join(" ").clone());
+                        db_writer(&self.db_conn, date, "_".to_string(),task).unwrap();
+                        self.result_add = "New untimed task added".to_string();
+                    }
+                }
+            }                
+                    
+            //////////////////////////////// COPY THIS EXAMPLE
+            // fn from_str(s: &str) -> Result<Self, Self::Err> {
+            // let mut split = s.split(',')
+            // let (Some(name), Some(age), None) = (split.next(), split.next(), split.next()) else {
+            //     //                      ^^^^ there should be no third element
+            //     return Err(ParsePersonError::BadLen);
+            // };
+            ///////////////////////////////
+
+        //     let // (line1, contents_line1) = &self.query.trim().split_once(' ').unwrap();
+        //     match (line1.parse::<String>(), contents_line1.parse::<String>()) {                    
+        //         (Ok(line), Ok(contents_line)) => {
+        //             db_writer(&self.db_conn, contents_line, line,"".to_string() ).unwrap();
+        //             self.result_add = "New task added".to_string();
+        //         },
+        //         _ => {
+        //             self.result_add = "Unable to parse query".to_string();
+        //         }
+        //     }
+        // }
+        };
 
         iced::Task::none()
     }
 
     fn view(&self) -> Element<'_,Message> {
         // let query_input = 5 as usize;
-        // let result = db_reader(&self.db_conn, &query_input).unwrap();
-        // let result_holder = Text::new(result),
+        // let result_check = db_reader(&self.db_conn, &query_input).unwrap();
+        // let result_holder = Text::new(result_check),
 
         // Verification of an entry
         let display = Text::new("Check task at given line number: ");
         
-        let input = iced::widget::TextEditor::new(&self.content)
+        let input_check = iced::widget::TextEditor::new(&self.content)
             .on_action(Message::TextEditorAction);
 
         let exec_button = Button::new("Search")
         .on_press(Message::QueryDo);
 
-        let output = Text::new(&self.result);
+        let output_check = Text::new(&self.result_check);
         //
         
         // Addition/modification of an entry
@@ -150,34 +188,44 @@ impl DBEditor {
         // Agenda for today
 
         // let display_today: Text<'_, Theme, Renderer>  = Text::new("Agenda for today: ");
-        // let input_today: Text<'_, Theme, Renderer>  = Text::new(&self.agenda_today);
+        let output_today: Text<'_, Theme, Renderer>  = Text::new(&self.agenda_today);
 
-        // let today: iced::widget::Column<'_, Message> = column![
-        //     display_today,
-        //     input_today
-        // ];
+        let today: iced::widget::Column<'_, Message> = column![
+            // display_today,
+            output_today
+        ];
 
         /////////////////////
         // Agenda for tomorrow
 
-        let display_tomorrow: Text<'_, Theme, Renderer>  = Text::new("Agenda for tomorrow: "); 
+        // let display_tomorrow: Text<'_, Theme, Renderer>  = Text::new("Agenda for tomorrow: "); 
+        let output_tomorrow: Text<'_, Theme, Renderer>  = Text::new(&self.agenda_tomorrow);
+
+        let tomorrow: iced::widget::Column<'_, Message> = column![
+            // display_today,
+            output_tomorrow
+        ];
         
         ///////////////////////////////////////////////////////////////////////////////////////////
         
         let layout = row![
-            Space::with_width(Length::Fixed(4.0)),
+            Space::with_width(Length::Fixed(6.0)),
             column![
+                today,
+                Space::with_height(Length::Fixed(10.0)),
                 row![display, Space::with_width(Length::Fill), exec_button],
-                input,
-                output
+                input_check,
+                output_check
                 ],
-            Space::with_width(Length::Fixed(8.0)),
+            Space::with_width(Length::Fixed(10.0)),
             column![
+                tomorrow,
+                Space::with_height(Length::Fixed(10.0)),
                 row![display_add,Space::with_width(Length::Fill),exec_button_add],
                 input_add,
                 output_add
                 ],
-            Space::with_width(Length::Fixed(4.0)),
+            Space::with_width(Length::Fixed(6.0)),
             ];
 
         let header = Text::new("Welcome to the agenda!").size(40);

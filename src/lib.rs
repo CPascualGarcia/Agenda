@@ -1,5 +1,6 @@
 use rusqlite::{Connection,OpenFlags};
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
+use chrono::{Datelike,Utc};
 
 
 //////////////////////////////////////////////////////
@@ -51,6 +52,28 @@ impl std::fmt::Display for AppError {
 //////////////////////////////////////////////////////
 
 
+// Functions to display today's agenda
+pub fn display_agenda() -> (String,String) {
+    let tomorrow = Utc::now() + Duration::from_secs(24*60*60);
+    
+    // let (month_today,day_today) = (Utc::now().month(),Utc::now().day());
+    // let (month_tomorrow,day_tomorrow) = (tomorrow.month(),tomorrow.day());
+
+    let agenda_today = vec![
+        format!("{0:?}/{1:?}   Agenda for today: ",Utc::now().day(),Utc::now().month()),
+        "__________________________________________________".to_string(),
+        " 9:00 - nothing to do".to_string()
+        ];
+
+    let agenda_tomorrow = vec![
+        format!("{0:?}/{1:?}   Agenda for tomorrow: ",tomorrow.day(),tomorrow.month()),
+        "__________________________________________________".to_string(),
+        " 9:00 - nothing to do".to_string()
+        ];
+    
+    // let agenda = vec!["Line_1".to_string(), "Line_2".to_string(), "Line_3".to_string()];
+    (agenda_today.join("\n"),agenda_tomorrow.join("\n"))
+}
 
 
 //////////////////////////////////////////////////////
@@ -64,38 +87,65 @@ pub fn parser_input(input: &str) -> Vec<String> {
 }
 
 
-pub fn db_reader(conn: &Connection, x: &usize) -> Result<String, AppError> {
+pub fn db_reader(conn: &Connection, x: &str) -> Result<String, AppError> {
 
     // Verify the entry exists
-    if db_verify(conn, *x)? == false {
+    if db_verify(conn, x)? == false {
         // println!("Entry does not exist in database.");
-        return Ok("NONE".to_string());
+        return Ok("NONE".to_string())
     }
     
-    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1")?;
+    let mut stmt = conn.prepare("SELECT * FROM events WHERE date = ?1")?;
     let mut rows = stmt.query(&[&x])?;
+    // let row = rows.mapped().iter();
+    // In case there are MULTIPLE entries, concatenate the rows
+    let mut activities: Vec<String> = vec![]; 
+    while let Ok(Some(row)) = rows.next() {
+        
+        let mut task: Vec<String> = vec![];
+        let hour:String = row.get(1)?;
+        if hour == "_" {
+            task.push("Daylong".to_string());
+        } else  {
+            task.push(row.get(1)?);    
+        };
 
-    let Some(row) = rows.next()? else { return Ok("NONE".to_string()) };
-    let task: String = row.get(1)?;
+        // activities.push(row.get(1)?);
+        task.push(row.get(2)?);        
+        activities.push(task.join(" - "));
+    };
+    //// let Some(row) = rows.next()? else { return Ok("NONE".to_string()) };
+    //// let task: String = row.get(1)?;
+    //// Ok(task)
 
-    Ok(task)
+    Ok(activities.join("\n"))
 }
 
 
-pub fn db_verify(conn: &Connection, x: usize) -> Result<bool, AppError> {
+pub fn db_verify(conn: &Connection, x: &str) -> Result<bool, AppError> {
 
-    // Check that the entry does not exist
-    let mut stmt = conn.prepare("SELECT * FROM tasks WHERE id = ?1")?;
+    // Check whether the entry does not exist
+    let mut stmt = conn.prepare("SELECT * FROM events WHERE date = ?1")?;
     let mut rows = stmt.query(&[&x])?;
     if rows.next().unwrap().is_some() {Ok(true)}
     else {Ok(false)}
 }
 
-pub fn db_writer(conn: &Connection, buffer: String, x: usize) -> Result<(), AppError> {
+// OLD - Use as reference
+// pub fn db_writer(conn: &Connection, buffer: String, x: usize) -> Result<(), AppError> {
+//     // Insert rows into the table
+//     let mut stmt = conn.prepare(
+//         "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)")?;
+//     stmt.execute((x, buffer))?;
+
+//     Ok(())
+// }
+
+pub fn db_writer(conn: &Connection, date: String, hour: String, task: String) -> Result<(), AppError> {
     // Insert rows into the table
     let mut stmt = conn.prepare(
-        "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)")?;
-    stmt.execute((x, buffer))?;
+        "INSERT OR REPLACE INTO events (date, hour, task) VALUES (?1, ?2, ?3)")?;
+    stmt.execute((date, hour, task))?;
 
     Ok(())
 }
@@ -105,10 +155,19 @@ pub fn db_setup(db_path: &str) -> Result<(), AppError> {
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE)?;
 
     // Create basic table
+    // conn.execute(
+    //     "CREATE TABLE IF NOT EXISTS 
+    //     tasks (id INTEGER PRIMARY KEY, task TEXT NOT NULL)", 
+    //     ())?;
+    
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS 
-        tasks (id INTEGER PRIMARY KEY, task TEXT NOT NULL)", 
-        ())?;
+        "CREATE TABLE IF NOT EXISTS events (
+            date TEXT,
+            hour TEXT,
+            task TEXT
+        )",
+        (),
+    )?;
 
     Ok(())
 }
