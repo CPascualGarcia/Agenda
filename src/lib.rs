@@ -1,6 +1,6 @@
 use rusqlite::{Connection,OpenFlags};
 use std::{sync::Arc, time::Duration};
-use chrono::{Datelike,Utc};
+use chrono::{Datelike, NaiveTime, Utc};
 
 
 //////////////////////////////////////////////////////
@@ -99,7 +99,7 @@ pub fn db_reader(conn: &Connection, x: &str) -> Result<String, AppError> {
     let mut rows = stmt.query(&[&x])?;
     // let row = rows.mapped().iter();
     // In case there are MULTIPLE entries, concatenate the rows
-    let mut activities: Vec<String> = vec![]; 
+    let mut activities: Vec<Vec<String>> = vec![]; 
     while let Ok(Some(row)) = rows.next() {
         
         let mut task: Vec<String> = vec![];
@@ -112,13 +112,25 @@ pub fn db_reader(conn: &Connection, x: &str) -> Result<String, AppError> {
 
         // activities.push(row.get(1)?);
         task.push(row.get(2)?);        
-        activities.push(task.join(" - "));
+        // activities.push(task.join(" - "));
+        activities.push(task);
     };
-    //// let Some(row) = rows.next()? else { return Ok("NONE".to_string()) };
-    //// let task: String = row.get(1)?;
-    //// Ok(task)
 
-    Ok(activities.join("\n"))
+    activities.sort_by(|a, b| {
+        match (a[0].parse::<NaiveTime>(), b[0].parse::<NaiveTime>()) {
+            (Ok(a), Ok(b)) => a.cmp(&b),
+            (Ok(_), Err(_)) => std::cmp::Ordering::Less,
+            (Err(_), Ok(_)) => std::cmp::Ordering::Greater,
+            (Err(_), Err(_)) => a[0].cmp(&b[0]),
+        }
+    });
+
+    let joined_schedule: Vec<String> = activities.iter()
+    .map(|row| row.join(" - "))
+    .collect();
+
+    // Ok(activities.join("\n"))
+    Ok(joined_schedule.join("\n"))
 }
 
 

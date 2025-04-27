@@ -1,5 +1,5 @@
 
-use std::clone;
+// use std::clone;
 
 use iced::{Element,Length,Renderer,Task,Theme};
 use iced::widget::{Button,Container,Space,Text,column,row,text_editor};
@@ -12,8 +12,8 @@ use Agenda::*;
 
 
 // TO DO
-// Add functionality to load tasks of one day
-// Add some tasks for the day, then load them directly
+// Add year to the entries in db_writer and db_reader
+// Add padding to the entries in db_writer and db_reader
 // Perhaps adapt content_add into a multi-box setup
 // Asynchronous functionalities
 
