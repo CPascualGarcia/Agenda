@@ -44,6 +44,7 @@ struct DBEditor {
     query: String,
     result_check: String,
     result_add: String,
+    // result_erase: String,
 
     // Agenda 
     agenda_today:    String,
@@ -70,10 +71,10 @@ impl DBEditor {
             content_add: text_editor::Content::with_text("Input as: <DD/MM> <HH:mm (optional)> <task>"),
             // content_erase:: text_editor::Content::with_text("Input as: <DD/MM> <task>"),
 
-
             query:        String::new(),
             result_check: String::new(),
             result_add:   String::new(),
+            // result_erase: String::new(),
 
             agenda_today: display_agenda().0,
             agenda_tomorrow: display_agenda().1
@@ -191,6 +192,8 @@ impl DBEditor {
         //     .on_action(Message::TextEditorActionErase);
 
         // let exec_button_erase: iced::widget::Button<'_, Message, Theme, Renderer> = Button::new("Erase").on_press(Message::QueryErase);
+
+        // let output_erase: Text<'_, Theme, Renderer> = Text::new(&self.result_erase);
 
         ///////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////
