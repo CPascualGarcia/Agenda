@@ -1,3 +1,4 @@
+use iced::widget::shader::wgpu::hal::auxil::db;
 use rusqlite::{Connection,OpenFlags};
 use core::task;
 use std::{sync::Arc, time::Duration};
@@ -164,18 +165,19 @@ pub fn db_writer(conn: &Connection, date: String, hour: String, task: String) ->
 }
 
 pub fn db_eraser(conn: &Connection, date: String, task: String) -> Result<(), AppError> {
-    
-    let mut stmt = conn.prepare(
-        "DELETE FROM events WHERE date = ?1 AND task = ?3")?;
 
-    match stmt.execute((date, task)) {
-        Ok(_) => {
-            Ok(())
-        },
-        Err(e) => { 
-            Err(AppError::RSQLError(Arc::new(e)))
-        }
-    }
+    let mut stmt = conn.prepare(
+        "DELETE FROM events WHERE date = ?1 AND task = ?2")?;
+
+    stmt.execute((date, task))?; Ok(())
+    // match stmt.execute((date, task)) {
+    //     Ok(_) => {
+    //         Ok(())
+    //     },
+    //     Err(e) => { 
+    //         Err(AppError::RSQLError(Arc::new(e)))
+    //     }
+    // }
 }
 
 

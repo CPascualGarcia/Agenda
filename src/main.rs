@@ -13,7 +13,7 @@ use Agenda::*;
 
 // TO DO
 // Add year to the entries in db_writer and db_reader
-// Add a delete button
+// Add numbering to the tasks of the day for an easier erasure
 // In db_eraser, verify that the code returns something if the asked entry does not exist
 // Perhaps adapt content_add into a multi-box setup
 // Asynchronous functionalities
@@ -40,11 +40,13 @@ struct DBEditor {
     db_conn: Connection,
     content: text_editor::Content,
     content_add: text_editor::Content,
-    // content_erase: text_editor::Content,
+    content_erase: text_editor::Content,
+
     query: String,
+
     result_check: String,
     result_add: String,
-    // result_erase: String,
+    result_erase: String,
 
     // Agenda 
     agenda_today:    String,
@@ -55,9 +57,10 @@ struct DBEditor {
 enum Message {
     TextEditorAction(text_editor::Action),
     TextEditorActionAdd(text_editor::Action),
-    // TextEditorActionErase(text_editor::Action),
+    TextEditorActionErase(text_editor::Action),
     QueryDo,
-    QueryChange
+    QueryChange,
+    QueryErase
 }
 
 
@@ -69,12 +72,12 @@ impl DBEditor {
             db_conn: connection,
             content: text_editor::Content::with_text("Input as: <DD/MM>"),
             content_add: text_editor::Content::with_text("Input as: <DD/MM> <HH:mm (optional)> <task>"),
-            // content_erase:: text_editor::Content::with_text("Input as: <DD/MM> <task>"),
+            content_erase: text_editor::Content::with_text("Input as: <DD/MM> <task>"),
 
             query:        String::new(),
             result_check: String::new(),
             result_add:   String::new(),
-            // result_erase: String::new(),
+            result_erase: String::new(),
 
             agenda_today: display_agenda().0,
             agenda_tomorrow: display_agenda().1
@@ -94,10 +97,10 @@ impl DBEditor {
                 self.content_add.perform(action);
                 self.query = self.content_add.text();
             },
-            // Message::TextEditorActionErase(action) => {
-            //     self.content_erase.perform(action);
-            //     self.query = self.content_erase.text();
-            // },
+            Message::TextEditorActionErase(action) => {
+                self.content_erase.perform(action);
+                self.query = self.content_erase.text();
+            },
             Message::QueryDo => {
                 let input_query = self.query.trim().to_owned()+"/2025";
                 match NaiveDate::parse_from_str(&input_query, "%d/%m/%Y") {
@@ -114,19 +117,39 @@ impl DBEditor {
                 let contents =  parser_input(&self.query);
                 if  contents.len()< 2 {
                     self.result_add = "Invalid query".to_string()
-                };
-                // Match case to parse the hour
-                match NaiveTime::parse_from_str(&contents[1], "%H:%M") {
-                    Ok(_) => {
-                        let (date, hour, task) = 
-                            (contents[0].clone(), contents[1].clone(), contents[2..].join(" ").clone());
-                        db_writer(&self.db_conn, date, hour, task).unwrap();
-                        self.result_add = "New timed task added".to_string();
+                } else {
+                    // Match case to parse the hour
+                    match NaiveTime::parse_from_str(&contents[1], "%H:%M") {
+                        Ok(_) => {
+                            let (date, hour, task) = 
+                                (contents[0].clone(), contents[1].clone(), contents[2..].join(" ").clone());
+                            db_writer(&self.db_conn, date, hour, task).unwrap();
+                            self.result_add = "New timed task added".to_string();
+                        }
+                        Err(_) => {
+                            let (date, task) = (contents[0].clone(), contents[1..].join(" ").clone());
+                            db_writer(&self.db_conn, date, "_".to_string(),task).unwrap();
+                            self.result_add = "New untimed task added".to_string();
+                        }
                     }
-                    Err(_) => {
-                        let (date, task) = (contents[0].clone(), contents[1..].join(" ").clone());
-                        db_writer(&self.db_conn, date, "_".to_string(),task).unwrap();
-                        self.result_add = "New untimed task added".to_string();
+                }
+            },
+            Message::QueryErase => {
+                let contents =  parser_input(&self.query);
+                if  contents.len()< 2 {
+                    self.result_erase = "Invalid query".to_string();  
+                } else {
+                    let input_query = contents[0].to_owned()+"/2025";
+                    match NaiveDate::parse_from_str(&input_query, "%d/%m/%Y") {
+                        Ok(_) => {
+                            let (date, task) = 
+                                (contents[0].clone(), contents[1..].join(" ").clone());
+                            db_eraser(&self.db_conn, date, task).unwrap();
+                            self.result_erase = "Task removed".to_string();
+                        }
+                        Err(_) => {
+                            self.result_erase = "Error parsing query".to_string();
+                        }
                     }
                 }
             }                
@@ -162,7 +185,7 @@ impl DBEditor {
         // let result_holder = Text::new(result_check),
 
         // Verification of an entry
-        let display = Text::new("Check task at given day: ");
+        let display = Text::new("Check tasks at given day: ");
         
         let input_check = iced::widget::TextEditor::new(&self.content)
             .on_action(Message::TextEditorAction);
@@ -170,7 +193,7 @@ impl DBEditor {
         let exec_button = Button::new("Search")
         .on_press(Message::QueryDo);
 
-        let output_check = Text::new(&self.result_check);
+        let output_check = Text::new(&self.result_check).height(100.0);
         //
         
         // Addition/modification of an entry
@@ -188,12 +211,12 @@ impl DBEditor {
         // Erasure of a task
         let display_erase: Text<'_, Theme, Renderer> = Text::new("Erase task: ");
 
-        // let input_erase: iced::widget::TextEditor<'_, _, Message> = iced::widget::TextEditor::new(&self.content_erase)
-        //     .on_action(Message::TextEditorActionErase);
+        let input_erase: iced::widget::TextEditor<'_, _, Message> = iced::widget::TextEditor::new(&self.content_erase)
+            .on_action(Message::TextEditorActionErase);
 
-        // let exec_button_erase: iced::widget::Button<'_, Message, Theme, Renderer> = Button::new("Erase").on_press(Message::QueryErase);
+        let exec_button_erase: iced::widget::Button<'_, Message, Theme, Renderer> = Button::new("Erase").on_press(Message::QueryErase);
 
-        // let output_erase: Text<'_, Theme, Renderer> = Text::new(&self.result_erase);
+        let output_erase: Text<'_, Theme, Renderer> = Text::new(&self.result_erase);
 
         ///////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////
@@ -227,8 +250,7 @@ impl DBEditor {
                 Space::with_height(Length::Fixed(10.0)),
                 row![display, Space::with_width(Length::Fill), exec_button],
                 input_check,
-                output_check,
-                display_erase
+                output_check
                 ],
             Space::with_width(Length::Fixed(10.0)),
             column![
@@ -236,7 +258,10 @@ impl DBEditor {
                 Space::with_height(Length::Fixed(10.0)),
                 row![display_add,Space::with_width(Length::Fill),exec_button_add],
                 input_add,
-                output_add
+                output_add,
+                row![display_erase, Space::with_width(Length::Fill), exec_button_erase],
+                input_erase,
+                output_erase
                 ],
             Space::with_width(Length::Fixed(6.0)),
             ];
