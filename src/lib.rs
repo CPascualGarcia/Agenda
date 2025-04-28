@@ -1,5 +1,5 @@
 use rusqlite::{Connection,OpenFlags};
-use std::{sync::Arc, time::Duration};
+use std::{fmt::format, sync::Arc, time::Duration};
 use chrono::{Datelike, NaiveTime, Utc};
 
 
@@ -53,22 +53,28 @@ impl std::fmt::Display for AppError {
 
 
 // Functions to display today's agenda
-pub fn display_agenda() -> (String,String) {
+pub fn display_agenda(conn: &Connection) -> (String,String) {
     let tomorrow = Utc::now() + Duration::from_secs(24*60*60);
     
-    // let (month_today,day_today) = (Utc::now().month(),Utc::now().day());
+    let date_today = format!("{:02}/{:02}",
+                        Utc::now().day(),Utc::now().month());
+    let tasks_today = db_reader(conn,&date_today).unwrap();
+    
     // let (month_tomorrow,day_tomorrow) = (tomorrow.month(),tomorrow.day());
+    let date_tomorrow = format!("{:02}/{:02}",
+                        tomorrow.day(),tomorrow.month());
+    let tasks_tomorrow = db_reader(conn,&date_tomorrow).unwrap();
 
     let agenda_today = vec![
-        format!("{0:?}/{1:?}   Agenda for today: ",Utc::now().day(),Utc::now().month()),
+        format!("{date_today}   Agenda for today: "),
         "__________________________________________________".to_string(),
-        " 9:00 - nothing to do".to_string()
+        tasks_today
         ];
 
     let agenda_tomorrow = vec![
-        format!("{0:?}/{1:?}   Agenda for tomorrow: ",tomorrow.day(),tomorrow.month()),
+        format!("{date_tomorrow}   Agenda for tomorrow: "),
         "__________________________________________________".to_string(),
-        " 9:00 - nothing to do".to_string()
+        tasks_tomorrow
         ];
     
     // let agenda = vec!["Line_1".to_string(), "Line_2".to_string(), "Line_3".to_string()];

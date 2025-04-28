@@ -14,7 +14,7 @@ use Agenda::*;
 // TO DO
 // Add year to the entries in db_writer and db_reader
 // Add numbering to the tasks of the day for an easier erasure
-// In db_eraser, verify that the code returns something if the asked entry does not exist
+// Use a tuple to define the instance
 // Perhaps adapt content_add into a multi-box setup
 // Asynchronous functionalities
 
@@ -69,6 +69,9 @@ impl DBEditor {
     fn new(connection:Connection) -> (Self, Task<Message>) {
         (
             Self {
+            agenda_today: display_agenda(&connection).0,
+            agenda_tomorrow: display_agenda(&connection).1,
+
             db_conn: connection,
             content: text_editor::Content::with_text("Input as: <DD/MM>"),
             content_add: text_editor::Content::with_text("Input as: <DD/MM> <HH:mm (optional)> <task>"),
@@ -77,10 +80,7 @@ impl DBEditor {
             query:        String::new(),
             result_check: String::new(),
             result_add:   String::new(),
-            result_erase: String::new(),
-
-            agenda_today: display_agenda().0,
-            agenda_tomorrow: display_agenda().1
+            result_erase: String::new()
         },
         // Task::perform(future, Message::TextAdded)
         Task::none()
