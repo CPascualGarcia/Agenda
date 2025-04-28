@@ -144,8 +144,12 @@ impl DBEditor {
                         Ok(_) => {
                             let (date, task) = 
                                 (contents[0].clone(), contents[1..].join(" ").clone());
-                            db_eraser(&self.db_conn, date, task).unwrap();
-                            self.result_erase = "Task removed".to_string();
+                            if db_verify_eraser(&self.db_conn, &date, &task) == false {
+                                self.result_erase = "Entry does not exist in database.".to_string();
+                            } else {
+                                db_eraser(&self.db_conn, date, task).unwrap();
+                                self.result_erase = "Task removed".to_string();
+                            }
                         }
                         Err(_) => {
                             self.result_erase = "Error parsing query".to_string();

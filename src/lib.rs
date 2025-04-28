@@ -1,6 +1,4 @@
-use iced::widget::shader::wgpu::hal::auxil::db;
 use rusqlite::{Connection,OpenFlags};
-use core::task;
 use std::{sync::Arc, time::Duration};
 use chrono::{Datelike, NaiveTime, Utc};
 
@@ -164,12 +162,23 @@ pub fn db_writer(conn: &Connection, date: String, hour: String, task: String) ->
     Ok(())
 }
 
+pub fn db_verify_eraser(conn: &Connection, date: &String, task: &String) -> bool {
+
+    // Check whether the entry does not exist
+    let mut stmt = conn
+        .prepare("SELECT * FROM events WHERE date = ?1 AND task = ?2").unwrap();
+    let mut rows = stmt.query(&[&date, &task]).unwrap();
+    if rows.next().unwrap().is_some() {true}
+    else {false}
+}
+
 pub fn db_eraser(conn: &Connection, date: String, task: String) -> Result<(), AppError> {
 
     let mut stmt = conn.prepare(
         "DELETE FROM events WHERE date = ?1 AND task = ?2")?;
 
-    stmt.execute((date, task))?; Ok(())
+    stmt.execute((date, task))?; 
+    Ok(())
     // match stmt.execute((date, task)) {
     //     Ok(_) => {
     //         Ok(())
