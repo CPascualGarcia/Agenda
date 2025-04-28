@@ -1,6 +1,3 @@
-
-// use std::clone;
-
 use iced::{Element,Length,Renderer,Task,Theme};
 use iced::widget::{Button,Container,Space,Text,column,row,text_editor};
 use chrono::{NaiveDate,NaiveTime};
@@ -132,7 +129,8 @@ impl DBEditor {
                             self.result_add = "New untimed task added".to_string();
                         }
                     }
-                }
+                };
+                (self.agenda_today,self.agenda_tomorrow) = display_agenda(&self.db_conn)
             },
             Message::QueryErase => {
                 let contents =  parser_input(&self.query);
@@ -155,7 +153,8 @@ impl DBEditor {
                             self.result_erase = "Error parsing query".to_string();
                         }
                     }
-                }
+                };
+                (self.agenda_today,self.agenda_tomorrow) = display_agenda(&self.db_conn)
             }                
                     
             //////////////////////////////// COPY THIS EXAMPLE
@@ -184,9 +183,6 @@ impl DBEditor {
     }
 
     fn view(&self) -> Element<'_,Message> {
-        // let query_input = 5 as usize;
-        // let result_check = db_reader(&self.db_conn, &query_input).unwrap();
-        // let result_holder = Text::new(result_check),
 
         // Verification of an entry
         let display = Text::new("Check tasks at given day: ");
@@ -224,26 +220,10 @@ impl DBEditor {
 
         ///////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////
-        // Agenda for today
+        // Agenda for today and tomorrow
 
-        // let display_today: Text<'_, Theme, Renderer>  = Text::new("Agenda for today: ");
-        let output_today: Text<'_, Theme, Renderer>  = Text::new(&self.agenda_today).height(200.);
-
-        let today: iced::widget::Column<'_, Message> = column![
-            // display_today,
-            output_today
-        ];
-
-        /////////////////////
-        // Agenda for tomorrow
-
-        // let display_tomorrow: Text<'_, Theme, Renderer>  = Text::new("Agenda for tomorrow: "); 
-        let output_tomorrow: Text<'_, Theme, Renderer>  = Text::new(&self.agenda_tomorrow).height(200.);
-
-        let tomorrow: iced::widget::Column<'_, Message> = column![
-            // display_today,
-            output_tomorrow
-        ];
+        let today: Text<'_, Theme, Renderer>    = Text::new(&self.agenda_today).height(250.);
+        let tomorrow: Text<'_, Theme, Renderer> = Text::new(&self.agenda_tomorrow).height(250.);
         
         ///////////////////////////////////////////////////////////////////////////////////////////
         
