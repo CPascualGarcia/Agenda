@@ -10,8 +10,6 @@ use Agenda::*;
 
 // TO DO
 // Add year to the entries in db_writer and db_reader
-// Add numbering to the tasks of the day for an easier erasure
-// Use a tuple to define the instance
 // Perhaps adapt content_add into a multi-box setup
 // Asynchronous functionalities
 
@@ -72,7 +70,7 @@ impl DBEditor {
             db_conn: connection,
             content: text_editor::Content::with_text("Input as: <DD/MM>"),
             content_add: text_editor::Content::with_text("Input as: <DD/MM> <HH:mm (optional)> <task>"),
-            content_erase: text_editor::Content::with_text("Input as: <DD/MM> <task>"),
+            content_erase: text_editor::Content::with_text("Input as: <DD/MM> <id>"),
 
             query:        String::new(),
             result_check: String::new(),
@@ -134,18 +132,18 @@ impl DBEditor {
             },
             Message::QueryErase => {
                 let contents =  parser_input(&self.query);
-                if  contents.len()< 2 {
+                if  contents.len() != 2 {
                     self.result_erase = "Invalid query".to_string();  
                 } else {
                     let input_query = contents[0].to_owned()+"/2025";
                     match NaiveDate::parse_from_str(&input_query, "%d/%m/%Y") {
                         Ok(_) => {
-                            let (date, task) = 
-                                (contents[0].clone(), contents[1..].join(" ").clone());
-                            if db_verify_eraser(&self.db_conn, &date, &task) == false {
-                                self.result_erase = "Entry does not exist in database.".to_string();
+                            let (date, id) = 
+                                (contents[0].clone(), contents[1].clone());
+                            if db_verify_eraser(&self.db_conn, &date, &id) == false {
+                                self.result_erase = "Entry does not exist in agenda.".to_string();
                             } else {
-                                db_eraser(&self.db_conn, date, task).unwrap();
+                                db_eraser(&self.db_conn, date, id).unwrap();
                                 self.result_erase = "Task removed".to_string();
                             }
                         }

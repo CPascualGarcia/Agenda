@@ -1,5 +1,6 @@
+use iced::widget::shader::wgpu::core::id;
 use rusqlite::{Connection,OpenFlags};
-use std::{fmt::format, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use chrono::{Datelike, NaiveTime, Utc};
 
 
@@ -109,16 +110,17 @@ pub fn db_reader(conn: &Connection, x: &str) -> Result<String, AppError> {
     while let Ok(Some(row)) = rows.next() {
         
         let mut task: Vec<String> = vec![];
-        let hour:String = row.get(1)?;
+        let hour:String = row.get(2)?;
         if hour == "_" {
             task.push("Daylong".to_string());
         } else  {
-            task.push(hour_padding(row.get(1)?));    
+            task.push(hour_padding(row.get(2)?));    
         };
 
-        // activities.push(row.get(1)?);
-        task.push(row.get(2)?);        
-        // activities.push(task.join(" - "));
+        let a: i64 = row.get(0)?;
+        task.push(format!("[{a}]"));
+        task.push(row.get(3)?);        
+
         activities.push(task);
     };
 
@@ -168,22 +170,22 @@ pub fn db_writer(conn: &Connection, date: String, hour: String, task: String) ->
     Ok(())
 }
 
-pub fn db_verify_eraser(conn: &Connection, date: &String, task: &String) -> bool {
+pub fn db_verify_eraser(conn: &Connection, date: &String, id: &String) -> bool {
 
     // Check whether the entry does not exist
     let mut stmt = conn
-        .prepare("SELECT * FROM events WHERE date = ?1 AND task = ?2").unwrap();
-    let mut rows = stmt.query(&[&date, &task]).unwrap();
+        .prepare("SELECT * FROM events WHERE date = ?1 AND id = ?2").unwrap();
+    let mut rows = stmt.query(&[&date, &id]).unwrap();
     if rows.next().unwrap().is_some() {true}
     else {false}
 }
 
-pub fn db_eraser(conn: &Connection, date: String, task: String) -> Result<(), AppError> {
+pub fn db_eraser(conn: &Connection, date: String, id: String) -> Result<(), AppError> {
 
     let mut stmt = conn.prepare(
-        "DELETE FROM events WHERE date = ?1 AND task = ?2")?;
+        "DELETE FROM events WHERE date = ?1 AND id = ?2")?;
 
-    stmt.execute((date, task))?; 
+    stmt.execute((date, id))?; 
     Ok(())
     // match stmt.execute((date, task)) {
     //     Ok(_) => {
@@ -209,6 +211,7 @@ pub fn db_setup(db_path: &str) -> Result<(), AppError> {
     
     conn.execute(
         "CREATE TABLE IF NOT EXISTS events (
+            id   INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT,
             hour TEXT,
             task TEXT
