@@ -1,4 +1,3 @@
-use iced::widget::shader::wgpu::core::id;
 use rusqlite::{Connection,OpenFlags};
 use std::{sync::Arc, time::Duration};
 use chrono::{Datelike, NaiveTime, Utc};
@@ -9,10 +8,8 @@ use chrono::{Datelike, NaiveTime, Utc};
 
 #[derive(Debug)]
 pub enum AppError {
-    // StdError(std::error::Error),
     IcedError(Arc<iced::Error>),
     RSQLError(Arc<rusqlite::Error>),
-    // IO(io::ErrorKind)
 }
 
 impl From<iced::Error> for AppError {
@@ -27,7 +24,7 @@ impl From<rusqlite::Error> for AppError {
     }
 }
 
-// I still need to understand why I wrote this initially...
+// Actually not necessary
 // impl Clone for AppError {
 //     fn clone(&self) -> Self {
 //         match self {
@@ -41,10 +38,8 @@ impl From<rusqlite::Error> for AppError {
 impl std::fmt::Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            // AppError::StdError(err) => write!(f, "Standard error: {}", err),
             AppError::IcedError(err) => write!(f, "Iced error: {}", err),
             AppError::RSQLError(err) => write!(f, "Rusqlite error: {}", err),
-            // AppError::IO(err) => write!(f, "IO error: {}", err),
         }
     }
 }
@@ -61,24 +56,22 @@ pub fn display_agenda(conn: &Connection) -> (String,String) {
                         Utc::now().day(),Utc::now().month());
     let tasks_today = db_reader(conn,&date_today).unwrap();
     
-    // let (month_tomorrow,day_tomorrow) = (tomorrow.month(),tomorrow.day());
     let date_tomorrow = format!("{:02}/{:02}",
                         tomorrow.day(),tomorrow.month());
     let tasks_tomorrow = db_reader(conn,&date_tomorrow).unwrap();
 
     let agenda_today = vec![
         format!("{date_today}   Agenda for today: "),
-        "__________________________________________________".to_string(),
+        "_____________________________________________________________".to_string(),
         tasks_today
         ];
 
     let agenda_tomorrow = vec![
         format!("{date_tomorrow}   Agenda for tomorrow: "),
-        "__________________________________________________".to_string(),
+        "_____________________________________________________________".to_string(),
         tasks_tomorrow
         ];
     
-    // let agenda = vec!["Line_1".to_string(), "Line_2".to_string(), "Line_3".to_string()];
     (agenda_today.join("\n"),agenda_tomorrow.join("\n"))
 }
 
@@ -96,15 +89,13 @@ pub fn parser_input(input: &str) -> Vec<String> {
 
 pub fn db_reader(conn: &Connection, x: &str) -> Result<String, AppError> {
 
-    // Verify the entry exists
+    // Verify there is at least one entry
     if db_verify(conn, x)? == false {
-        // println!("Entry does not exist in database.");
         return Ok("NONE".to_string())
     }
     
     let mut stmt = conn.prepare("SELECT * FROM events WHERE date = ?1")?;
     let mut rows = stmt.query(&[&x])?;
-    // let row = rows.mapped().iter();
     // In case there are MULTIPLE entries, concatenate the rows
     let mut activities: Vec<Vec<String>> = vec![]; 
     while let Ok(Some(row)) = rows.next() {
@@ -151,15 +142,6 @@ pub fn db_verify(conn: &Connection, x: &str) -> Result<bool, AppError> {
     else {Ok(false)}
 }
 
-// OLD - Use as reference
-// pub fn db_writer(conn: &Connection, buffer: String, x: usize) -> Result<(), AppError> {
-//     // Insert rows into the table
-//     let mut stmt = conn.prepare(
-//         "INSERT OR REPLACE INTO tasks (id, task) VALUES (?1, ?2)")?;
-//     stmt.execute((x, buffer))?;
-
-//     Ok(())
-// }
 
 pub fn db_writer(conn: &Connection, date: String, hour: String, task: String) -> Result<(), AppError> {
     // Insert rows into the table
@@ -187,14 +169,6 @@ pub fn db_eraser(conn: &Connection, date: String, id: String) -> Result<(), AppE
 
     stmt.execute((date, id))?; 
     Ok(())
-    // match stmt.execute((date, task)) {
-    //     Ok(_) => {
-    //         Ok(())
-    //     },
-    //     Err(e) => { 
-    //         Err(AppError::RSQLError(Arc::new(e)))
-    //     }
-    // }
 }
 
 
@@ -202,12 +176,6 @@ pub fn db_eraser(conn: &Connection, date: String, id: String) -> Result<(), AppE
 pub fn db_setup(db_path: &str) -> Result<(), AppError> {
     let conn = Connection::open_with_flags(db_path,
         OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE)?;
-
-    // Create basic table
-    // conn.execute(
-    //     "CREATE TABLE IF NOT EXISTS 
-    //     tasks (id INTEGER PRIMARY KEY, task TEXT NOT NULL)", 
-    //     ())?;
     
     conn.execute(
         "CREATE TABLE IF NOT EXISTS events (

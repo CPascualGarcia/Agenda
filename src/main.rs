@@ -154,27 +154,6 @@ impl DBEditor {
                 };
                 (self.agenda_today,self.agenda_tomorrow) = display_agenda(&self.db_conn)
             }                
-                    
-            //////////////////////////////// COPY THIS EXAMPLE
-            // fn from_str(s: &str) -> Result<Self, Self::Err> {
-            // let mut split = s.split(',')
-            // let (Some(name), Some(age), None) = (split.next(), split.next(), split.next()) else {
-            //     //                      ^^^^ there should be no third element
-            //     return Err(ParsePersonError::BadLen);
-            // };
-            ///////////////////////////////
-
-        //     let // (line1, contents_line1) = &self.query.trim().split_once(' ').unwrap();
-        //     match (line1.parse::<String>(), contents_line1.parse::<String>()) {                    
-        //         (Ok(line), Ok(contents_line)) => {
-        //             db_writer(&self.db_conn, contents_line, line,"".to_string() ).unwrap();
-        //             self.result_add = "New task added".to_string();
-        //         },
-        //         _ => {
-        //             self.result_add = "Unable to parse query".to_string();
-        //         }
-        //     }
-        // }
         };
 
         iced::Task::none()
@@ -217,7 +196,6 @@ impl DBEditor {
         let output_erase: Text<'_, Theme, Renderer> = Text::new(&self.result_erase);
 
         ///////////////////////////////////////////////////////////////////////////////////////////
-        /////////////////////
         // Agenda for today and tomorrow
 
         let today: Text<'_, Theme, Renderer>    = Text::new(&self.agenda_today).height(250.);
